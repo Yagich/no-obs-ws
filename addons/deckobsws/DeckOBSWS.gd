@@ -95,9 +95,7 @@ class Message:
 			"d": {}
 		}
 
-		for prop in _d:
-			prop = prop as String
-			data["d"][prop.to_camel_case()] = _d[prop]
+		data.d = snake_to_camel_recursive(_d)
 
 		return JSON.stringify(data)
 
