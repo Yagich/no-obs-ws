@@ -1,10 +1,15 @@
 extends Node
 
 const Authenticator := preload("res://addons/deckobsws/Authenticator.gd")
+const Enums := preload("res://addons/deckobsws/Utility/Enums.gd")
 
 var _ws: WebSocketPeer
 
 const WS_URL := "127.0.0.1:%s"
+
+signal connection_ready()
+signal connection_failed()
+signal connection_closed_clean(code: int, reason: String)
 
 signal _auth_required()
 
@@ -31,8 +36,10 @@ func _poll_socket() -> void:
 		WebSocketPeer.STATE_CLOSING:
 			pass
 		WebSocketPeer.STATE_CLOSED:
-			print("closed, ", _ws.get_close_code())
-			print("closed, ", _ws.get_close_reason())
+			if _ws.get_close_code() == -1:
+				connection_failed.emit()
+			else:
+				connection_closed_clean.emit(_ws.get_close_code(), _ws.get_close_reason())
 			_ws = null
 
 
@@ -45,9 +52,20 @@ func _handle_packet(packet: PackedByteArray) -> void:
 func _handle_message(message: Message) -> void:
 	print(message)
 	match message.op_code:
-		# authenticate
-		0:
-			_auth_required.emit(message)
+		Enums.WebSocketOpCode.HELLO:
+			if message.get("authentication") != null:
+				_auth_required.emit(message)
+			else:
+				var m = Message.new()
+				m.op_code = Enums.WebSocketOpCode.IDENTIFY
+				_send_message(m)
+
+		Enums.WebSocketOpCode.IDENTIFIED:
+			connection_ready.emit()
+
+
+func _send_message(message: Message) -> void:
+	_ws.send_text(message.to_obsws_json())
 
 
 func _authenticate(message: Message, password: String) -> void:
@@ -58,11 +76,11 @@ func _authenticate(message: Message, password: String) -> void:
 	)
 	var auth_string = authenticator.get_auth_string()
 	var m = Message.new()
-	m.op_code = 1
+	m.op_code = Enums.WebSocketOpCode.IDENTIFY
 	m._d["authentication"] = auth_string
 	print("MY RESPONSE: ")
 	print(m)
-	_ws.send_text(m.to_obsws_json())
+	_send_message(m)
 
 
 class Message:
