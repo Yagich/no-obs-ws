@@ -134,3 +134,14 @@ class Message:
 			else:
 				snaked[prop.to_snake_case()] = d[prop]
 		return snaked
+
+
+	static func snake_to_camel_recursive(d: Dictionary) -> Dictionary:
+		var cameled = {}
+		for prop in d:
+			prop = prop as String
+			if d[prop] is Dictionary:
+				cameled[prop.to_camel_case()] = snake_to_camel_recursive(d[prop])
+			else:
+				cameled[prop.to_camel_case()] = d[prop]
+		return cameled
