@@ -4,12 +4,18 @@ const Authenticator := preload("res://addons/deckobsws/Authenticator.gd")
 const Enums := preload("res://addons/deckobsws/Utility/Enums.gd")
 
 var _ws: WebSocketPeer
+# {request_id: RequestResponse}
+var _requests: Dictionary = {}
 
 const WS_URL := "127.0.0.1:%s"
 
 signal connection_ready()
 signal connection_failed()
 signal connection_closed_clean(code: int, reason: String)
+
+signal error(message: String)
+
+signal event_received(event: Message)
 
 signal _auth_required()
 
@@ -18,6 +24,32 @@ func connect_to_obsws(port: int, password: String = "") -> void:
 	_ws = WebSocketPeer.new()
 	_ws.connect_to_url(WS_URL % port)
 	_auth_required.connect(_authenticate.bind(password))
+
+
+func make_generic_request(request_type: String, request_data: Dictionary = {}) -> RequestResponse:
+	var response := RequestResponse.new()
+	var message := Message.new()
+
+	var crypto := Crypto.new()
+	var request_id := crypto.generate_random_bytes(16).hex_encode()
+
+	var data := {
+		"request_type": request_type,
+		"request_id": request_id,
+		"request_data": request_data,
+	}
+	message._d.merge(data, true)
+
+	message.op_code = Enums.WebSocketOpCode.REQUEST
+
+	response.id = request_id
+	response.type = request_type
+
+	_requests[request_id] = response
+
+	_send_message(message)
+
+	return response
 
 
 func _process(_delta: float) -> void:
@@ -50,7 +82,7 @@ func _handle_packet(packet: PackedByteArray) -> void:
 
 
 func _handle_message(message: Message) -> void:
-	print(message)
+#	print(message)
 	match message.op_code:
 		Enums.WebSocketOpCode.HELLO:
 			if message.get("authentication") != null:
@@ -62,6 +94,26 @@ func _handle_message(message: Message) -> void:
 
 		Enums.WebSocketOpCode.IDENTIFIED:
 			connection_ready.emit()
+
+		Enums.WebSocketOpCode.EVENT:
+			event_received.emit(message)
+
+		Enums.WebSocketOpCode.REQUEST_RESPONSE:
+			print("Req Response")
+			var id = message.get_data().get("request_id")
+			if id == null:
+				error.emit("Received request response, but there was no request id field.")
+				return
+
+			var response = _requests.get(id) as RequestResponse
+			if response == null:
+				error.emit("Received request response, but there was no request made with that id.")
+				return
+
+			response.message = message
+
+			response.response_received.emit()
+			_requests.erase(id)
 
 
 func _send_message(message: Message) -> void:
@@ -118,8 +170,12 @@ class Message:
 		return JSON.stringify(data)
 
 
+	func get_data() -> Dictionary:
+		return _d
+
+
 	func _to_string() -> String:
-		return to_obsws_json()
+		return var_to_str(_d)
 
 
 	static func from_json(json: String) -> Message:
@@ -161,3 +217,11 @@ class Message:
 			else:
 				cameled[prop.to_camel_case()] = d[prop]
 		return cameled
+
+
+class RequestResponse:
+	signal response_received()
+
+	var id: String
+	var type: String
+	var message: Message
