@@ -28,7 +28,7 @@ func _ready():
 	var request = no_obs_ws.make_generic_request("GetStats")
 	await request.response_received
 
-	print request.message.get_data()
+	print(request.message.get_data())
 
 
 func _on_no_obs_ws_event_received(event: NoOBSWS.Message):
