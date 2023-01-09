@@ -1,7 +1,8 @@
 extends Node
+class_name NoOBSWS
 
-const Authenticator := preload("res://addons/deckobsws/Authenticator.gd")
-const Enums := preload("res://addons/deckobsws/Utility/Enums.gd")
+const Authenticator := preload("res://addons/no-obs-ws/Authenticator.gd")
+const Enums := preload("res://addons/no-obs-ws/Utility/Enums.gd")
 
 var _ws: WebSocketPeer
 # {request_id: RequestResponse}
