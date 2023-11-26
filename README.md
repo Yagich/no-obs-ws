@@ -1,5 +1,5 @@
 # NoOBSWS
-An [obs-websocket](https://github.com/obsproject/obs-websocket) client and translation layer for Godot 4.0. Currently very barebones, and only supports authentication, events sent from OBS, and requests.
+An [obs-websocket](https://github.com/obsproject/obs-websocket) client and translation layer for Godot 4.2. Currently very barebones, and only supports authentication, events sent from OBS, and requests.
 
 # Quick setup
 - Install the addon
