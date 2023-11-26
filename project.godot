@@ -8,20 +8,10 @@
 
 config_version=5
 
-_global_script_classes=[{
-"base": "Node",
-"class": &"NoOBSWS",
-"language": &"GDScript",
-"path": "res://addons/no-obs-ws/NoOBSWS.gd"
-}]
-_global_script_class_icons={
-"NoOBSWS": ""
-}
-
 [application]
 
 config/name="no-obs-ws"
-config/features=PackedStringArray("4.0", "Forward Plus")
+config/features=PackedStringArray("4.2", "Forward Plus")
 config/icon="res://icon.svg"
 
 [editor_plugins]

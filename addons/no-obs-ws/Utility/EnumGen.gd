@@ -17,25 +17,28 @@ static func generate_enums(protocol_json_path: String, output_to_path: String) -
 		for enumlet in e.enumIdentifiers:
 			var enumlet_value: int
 
-			if !(enumlet.enumValue is String) || !("|" in enumlet.enumValue):
-				enumlet_value = int(enumlet.enumValue)
-			else:
-				var enumlet_value_token: String = (enumlet.enumValue as String)\
-					.substr(1)\
-					.substr(0, enumlet.enumValue.length() - 2)
-				var split := Array(enumlet_value_token.split("|")).map(
-					func(x: String):
-						return x.strip_edges()
-				)
+			match typeof(enumlet.enumValue):
+				TYPE_FLOAT:
+					enumlet_value = int(enumlet.enumValue)
+				TYPE_STRING when "<<" in enumlet.enumValue:
+					enumlet_value = tokenize_lbitshift(enumlet.enumValue)
+				TYPE_STRING when "|" in enumlet.enumValue:
+					var token: String = (enumlet.enumValue as String)\
+						.trim_prefix("(")\
+						.trim_suffix(")")
+					var split := Array(token.split("|")).map(
+						func(x: String):
+							return x.strip_edges()
+							)
+					var calc: int
+					for enum_partial in e.enumIdentifiers:
+						if enum_partial.enumIdentifier not in split:
+							continue
 
-				var calculated_value: int
-				for enum_partial in e.enumIdentifiers:
-					if !(enum_partial.enumIdentifier) in split:
-						continue
-
-					calculated_value |= int(enum_partial.enumValue)
-
-				enumlet_value = calculated_value
+						calc |= tokenize_lbitshift(enum_partial.enumValue)
+					enumlet_value = calc
+				TYPE_STRING:
+					enumlet_value = int(enumlet.enumValue)
 
 			res += "\t%s = %s,\n" % [
 				(enumlet.enumIdentifier as String).to_snake_case().to_upper(),
@@ -46,3 +49,15 @@ static func generate_enums(protocol_json_path: String, output_to_path: String) -
 
 	var result_file := FileAccess.open(output_to_path, FileAccess.WRITE)
 	result_file.store_string(res.strip_edges() + "\n")
+
+
+static func tokenize_lbitshift(s: String) -> int:
+	var tokens := Array(s\
+		.trim_prefix("(")\
+		.trim_suffix(")")\
+		.split("<<")).map(
+			func(x: String):
+				return int(x)
+				)
+
+	return tokens[0] << tokens [1]
