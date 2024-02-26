@@ -4,6 +4,8 @@ class_name NoOBSWS
 const Authenticator := preload("res://addons/no-obs-ws/Authenticator.gd")
 const Enums := preload("res://addons/no-obs-ws/Utility/Enums.gd")
 
+@export var subscriptions: Enums.EventSubscription = Enums.EventSubscription.ALL
+
 var _ws: WebSocketPeer
 # {request_id: RequestResponse}
 var _requests: Dictionary = {}
@@ -96,7 +98,7 @@ func _poll_socket() -> void:
 
 func _handle_packet(packet: PackedByteArray) -> void:
 	var message = Message.from_json(packet.get_string_from_utf8())
-	print("got message with code ", message.op_code)
+	#print("got message with code ", message.op_code)
 	_handle_message(message)
 
 
@@ -109,6 +111,7 @@ func _handle_message(message: Message) -> void:
 			else:
 				var m = Message.new()
 				m.op_code = Enums.WebSocketOpCode.IDENTIFY
+				m._d["event_subscriptions"] = subscriptions
 				_send_message(m)
 
 		Enums.WebSocketOpCode.IDENTIFIED:
@@ -118,7 +121,7 @@ func _handle_message(message: Message) -> void:
 			event_received.emit(message)
 
 		Enums.WebSocketOpCode.REQUEST_RESPONSE:
-			print("Req Response")
+			#print("Req Response")
 			var id = message.get_data().get("request_id")
 			if id == null:
 				error.emit("Received request response, but there was no request id field.")
@@ -165,8 +168,9 @@ func _authenticate(message: Message, password: String) -> void:
 	var m = Message.new()
 	m.op_code = Enums.WebSocketOpCode.IDENTIFY
 	m._d["authentication"] = auth_string
-	print("MY RESPONSE: ")
-	print(m)
+	m._d["event_subscriptions"] = subscriptions
+	#print("MY RESPONSE: ")
+	#print(m)
 	_send_message(m)
 
 
