@@ -30,6 +30,14 @@ func connect_to_obsws(port: int, password: String = "") -> void:
 	_auth_required.connect(_authenticate.bind(password))
 
 
+func disconnect_from_obsws() -> void:
+	if _ws == null:
+		return
+
+	_auth_required.disconnect(_authenticate)
+	_ws = null
+
+
 func make_generic_request(request_type: String, request_data: Dictionary = {}) -> RequestResponse:
 	var response := RequestResponse.new()
 	var message := Message.new()
